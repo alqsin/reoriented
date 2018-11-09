@@ -2,6 +2,7 @@ import re
 
 # Training
 BATCH_SIZE = 256
+VALIDATION_FRAC = 0.1
 
 # Dataset
 FEN_COL = 'fen'

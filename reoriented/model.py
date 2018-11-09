@@ -1,6 +1,5 @@
 import os
 
-import pandas as pd
 import numpy as np
 import tensorflow as tf
 from tensorflow import keras
@@ -33,21 +32,6 @@ def shuffle_arrays_together(a, b):
   p = np.random.permutation(len(a))
   return a[p], b[p]
 
-def import_data(filename):
-  """Opens dataset and returns two NumPy arrays. The first array is a 2D array
-  of width 64 containing FENs converted to flattened arrays of integers. The
-  second array contains a 0 or 1 for each row of the FEN array, specifying
-  whether or not the board representation is flipped.
-  """
-  with open(filename, 'r') as f:
-    df = pd.read_csv(f, nrows = const.SAMPLE_SIZE).sample(frac = 1.)
-  
-  fens = np.array(df[const.FEN_COL].apply(
-    lambda x: np.array(fen_tools.normalize_fen(x))
-  ).values.tolist())
-  labels = df[const.LABEL_COL].values
-  return fens, labels
-
 def import_data_fast(filename):
   """Does the same thing as import_data(), but does not use Pandas to read
   data. Should be faster, but is probably less stable and does not work if
@@ -73,9 +57,6 @@ def import_data_fast(filename):
 
 def get_model():
   """Returns a model which can be trained on the data."""
-  # def leaky_relu(x):
-  #   alpha = 0.0001
-  #   return keras.activations.relu(x, alpha)
 
   model = keras.Sequential()
   model.add(keras.layers.Embedding(
@@ -92,7 +73,7 @@ def get_model():
   model.add(keras.layers.Dense(
     1024,
     activation = 'relu'))
-  model.add(keras.layers.Dense(1, activation = 'tanh'))
+  model.add(keras.layers.Dense(1, activation = 'sigmoid'))
 
   model.compile(
     optimizer = keras.optimizers.Adam(lr = 0.001),
@@ -107,7 +88,7 @@ def run_train_model(model, data_file):
   if fens is None or labels is None:
     return
 
-  NUM_VALIDATE = int(0.1 * const.SAMPLE_SIZE)
+  NUM_VALIDATE = int(round(const.VALIDATION_FRAC * const.SAMPLE_SIZE))
 
   fen_val = fens[:NUM_VALIDATE]
   label_val = labels[:NUM_VALIDATE]
@@ -129,7 +110,7 @@ def run_train_model(model, data_file):
       curr_pos, const.SAMPLE_SIZE - NUM_VALIDATE, loss[0], loss[1],
       prev_loss, prev_acc
     )
-  print()
+  print()  # adds newline so previous print_model_loss is visible
 
   # validate batchwise
   curr_pos = prev_loss = prev_acc = 0
@@ -146,7 +127,7 @@ def run_train_model(model, data_file):
       curr_pos, NUM_VALIDATE, loss[0], loss[1],
       prev_loss, prev_acc, train = False
     )
-  print()
+  print()  # adds newline so previous print_model_loss is visible
 
 if __name__ == '__main__':
   model = get_model()
